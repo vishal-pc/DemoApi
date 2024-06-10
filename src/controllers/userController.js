@@ -1,12 +1,8 @@
-import db from "../config/db.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { passwordRegex, emailValidate } from "../utils/helper.js";
-import axios from "axios";
-import FormData from "form-data";
 import envConfig from "../config/envConfig.js";
-
-const User = db.User;
+import Auth from "../models/userModel.js";
 
 export const registerUser = async (req, res) => {
   try {
@@ -33,7 +29,7 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await Auth.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
         message: `User with email ${email} already exists`,
@@ -49,7 +45,7 @@ export const registerUser = async (req, res) => {
       password: hashedPassword,
     };
 
-    const userSaved = await User.create(newUser);
+    const userSaved = await Auth.create(newUser);
     if (userSaved.id) {
       return res.render("login");
     } else {
@@ -74,7 +70,7 @@ export const loginUser = async (req, res, next) => {
       });
     }
 
-    let user = await User.findOne({ where: { email } });
+    let user = await Auth.findOne({ email });
 
     if (user) {
       const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -93,33 +89,7 @@ export const loginUser = async (req, res, next) => {
       );
 
       return res.render("home", { token });
-    }
-
-    // const formData = new FormData();
-    // formData.append("email", email);
-    // formData.append("password", password);
-    // const fetchUrl = "http://192.168.1.120:8002/api/login";
-    // const response = await axios.post(fetchUrl, formData, {
-    //   timeout: 2000,
-    //   headers: {
-    //     "Content-Type": "multipart/form-data",
-    //   },
-    // });
-
-    // if (response.status === 200 && response.data.token) {
-    //   return res.status(200).json({
-    //     message: "External login successful",
-    //     userData: response.data.token,
-    //   });
-    // } else if (
-    //   response.status === 401 &&
-    //   response.data.error === "Please fill correct email address..!!"
-    // ) {
-    //   return res.status(401).json({
-    //     message: response.data.error,
-    //   });
-    // }
-    else {
+    } else {
       return res.status(500).json({
         message: "invalid email or password",
       });
@@ -135,7 +105,7 @@ export const getUser = async (req, res) => {
   try {
     const { id } = req.user;
 
-    const user = await User.findOne({ where: { id } });
+    const user = await Auth.findById({ _id: id });
     if (!user) {
       return res.status(404).json({
         message: "User not found",
@@ -160,7 +130,7 @@ export const getUser = async (req, res) => {
 // Get All User api
 export const getAllUser = async (req, res) => {
   try {
-    const users = await User.findAll();
+    const users = await Auth.findAll();
     if (!users || users.length === 0) {
       return res.status(404).json({
         message: "Users not found",
